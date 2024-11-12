@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <unistd.h>
 
 int main()
 {
@@ -38,6 +39,7 @@ int main()
         return 1;
     }
 
+    // make the socket listen, with a queue of 5
     if (listen(sockfd, 5) != 0)
     {
         perror("Error listening to socket");
@@ -49,19 +51,32 @@ int main()
     printf("Listening on port 69");
 
     struct sockaddr_in clientaddr;
-    socklen_t client_len = sizeof(client_addr);
+    socklen_t client_len = sizeof(clientaddr);
 
     while (true)
     {
+        // accept incoming connection and store client address info
         if ((new_sockfd = accept(sockfd, (struct sockaddr *)&clientaddr, &client_len)) == -1)
         {
             perror("Error accepting connection");
-            close(sockfd);
-            return 1;
+            continue;
         }
-    }
 
-    printf("Connection accepted");
+        // Read data from new_sockfd into buffer, null terminate, then print out
+        char buf[4096];
+        int bytes_read = read(new_sockfd, buf, 4095);
+        if (bytes_read < 0)
+        {
+            perror("Error reading fd")
+        }
+        else
+        {
+            buf[bytes_read] = '\0';
+            printf("\n%s\n", buf);
+        }
+
+        close(new_sockfd);
+    }
 
     close(sockfd);
     freeaddrinfo(res);
