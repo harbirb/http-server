@@ -1,3 +1,4 @@
 {
-  "C_Cpp.default.compilerPath": "/bin/clang++"
+  "C_Cpp.default.compilerPath": "/bin/clang++",
+  "C_Cpp.errorSquiggles": "enabled"
 }

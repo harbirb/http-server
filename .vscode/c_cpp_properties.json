@@ -6,7 +6,9 @@
                 "${workspaceFolder}/**",
                 "/usr/include/x86_64-linux-gnu/sys"
             ],
-            "defines": []
+            "defines": [],
+            "intelliSenseMode": "linux-clang-x64",
+            "compilerPath": "/usr/bin/clang++-18"
         }
     ],
     "version": 4
