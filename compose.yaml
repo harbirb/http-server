@@ -1,0 +1,8 @@
+services:
+  app:
+    image: my-http-server
+    volumes:
+      - ./source:/app
+    command: sh -c "g++ /app/server.cpp -o my_server && ./my_server"
+    build:
+      context: .
