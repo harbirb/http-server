@@ -1,10 +1,15 @@
 
-FROM alpine:latest as base
+FROM gcc:latest
 
-# Install necessary packages (e.g., build-essential for C/C++ development)
-RUN apk add --no-cache gcc g++ make libc-dev
+WORKDIR /app
 
-# Change working directory to /app
-# WORKDIR /app
+# Install basic development tools
+RUN apt-get update && apt-get install -y \
+    gdb \
+    make \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
 
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]
 

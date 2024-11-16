@@ -1,8 +1,12 @@
 services:
   app:
-    image: my-http-server
+    build: .
     volumes:
       - ./source:/app
-    command: sh -c "g++ /app/server.cpp -o my_server && ./my_server"
-    build:
-      context: .
+    ports:
+      - "8080:8080" # Adjust port according to your server configuration
+    # Enable debugging capabilities
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
