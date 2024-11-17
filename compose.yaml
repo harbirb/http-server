@@ -2,7 +2,7 @@ services:
   app:
     build: .
     volumes:
-      - ./source:/app
+      - .:/workspace
     ports:
       - "8080:8080" # Adjust port according to your server configuration
     # Enable debugging capabilities

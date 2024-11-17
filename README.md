@@ -23,3 +23,8 @@
   - Or both steps at once using "docker compose up --build -d"
 - Run the interactive shell with "docker compose exec -it app bash"
 - Compile and run with "gcc -o server server.cpp", "./server"
+
+
+#### Docker for Development
+- Dev container - using existing docker compose 
+- Rebuild container to reflect changes to mounted volumes, restart container to test runtime changes
