@@ -3,8 +3,8 @@ services:
     build: .
     volumes:
       - .:/workspace
-    ports:
-      - "8080:8080" # Adjust port according to your server configuration
+    # ports:
+    # - "8080:8080" # Adjust port according to your server configuration
     # Enable debugging capabilities
     cap_add:
       - SYS_PTRACE

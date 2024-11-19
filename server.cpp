@@ -4,54 +4,56 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <signal.h>
+
+int sockfd, new_sockfd;
+
+// close sockets upon signal interruption
+// enable re-use of ports
+void handle_sigint(int sig)
+{
+    close(sockfd);
+    printf("\nSocket closed. Exiting gracefully.\n");
+    exit(0);
+}
 
 int main()
 {
-    int sockfd, new_sockfd;
-    struct addrinfo hints, *res;
-
-    // specify hints for getaddrinfo
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;       // For IPv4; use AF_INET6 for IPv6, or AF_UNSPEC for either
-    hints.ai_socktype = SOCK_STREAM; // TCP socket
-    hints.ai_flags = AI_PASSIVE;     // Use the IP address of the local machine
-
-    int status = getaddrinfo(NULL, "8080", &hints, &res);
-    if (status != 0)
-    {
-        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
-        return 1;
-    }
-
-    // create socket
-    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    signal(SIGINT, handle_sigint);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
     {
         perror("Error in creating socket");
-        freeaddrinfo(res);
         return 1;
     }
 
-    // bind socket to local machine addr at port 8080
+    struct sockaddr_in server_addr;
+    server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(8080);
+
+    // bind socket to local machine addr at port specified in getaddrinfo
     // ports 1024 and below are priveleged
-    if (bind(sockfd, res->ai_addr, res->ai_addrlen) != 0)
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0)
     {
         perror("Error binding socket");
         close(sockfd);
-        freeaddrinfo(res);
         return 1;
     }
+    printf("Listening on localhost:8080");
+
+    // stored in network byte order (big-endian)
+    uint32_t local_ip = server_addr.sin_addr.s_addr;
+    printf("\nIP is: %d.%d.%d.%d\n", local_ip & 0xff, local_ip >> 8 & 0x0ff, local_ip >> 16 & 0x0ff, local_ip >> 24 & 0x0ff);
+    // printf("\nPort is: %d\n", local_addr.sin_port);
 
     // make the socket listen, with a queue of 5
-    if (listen(sockfd, 5) != 0)
+    if (listen(sockfd, 900) != 0)
     {
         perror("Error listening to socket");
         close(sockfd);
-        freeaddrinfo(res);
         return 1;
     }
-
-    printf("Listening on port 8080");
 
     struct sockaddr_in clientaddr;
     socklen_t client_len = sizeof(clientaddr);
@@ -101,6 +103,5 @@ int main()
     }
 
     close(sockfd);
-    freeaddrinfo(res);
     return 0;
 }
