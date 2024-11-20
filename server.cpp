@@ -7,9 +7,9 @@
 #include <signal.h>
 
 int sockfd, new_sockfd;
+int PORT = 8080;
 
-// close sockets upon signal interruption
-// enable re-use of ports
+// close sockets upon signal interruption, enable re-use of ports
 void handle_sigint(int sig)
 {
     close(sockfd);
@@ -19,6 +19,9 @@ void handle_sigint(int sig)
 
 int main()
 {
+    struct sockaddr_in server_addr;
+
+    // create socket, IPV4, type=STREAM
     signal(SIGINT, handle_sigint);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
@@ -27,56 +30,50 @@ int main()
         return 1;
     }
 
-    struct sockaddr_in server_addr;
+    // socket bind configuration - use loopback address (localhost), ipv4, port 8080
+    // htonl - host-to-netword conversion - IP is 4-byte long, port is 2 byte short
     server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(8080);
+    server_addr.sin_port = htons(PORT);
 
-    // bind socket to local machine addr at port specified in getaddrinfo
-    // ports 1024 and below are priveleged
+    // bind socket
     if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0)
     {
         perror("Error binding socket");
         close(sockfd);
         return 1;
     }
-    printf("Listening on localhost:8080");
 
-    // stored in network byte order (big-endian)
+    // stored in network byte order (big-endian), need to convert to human-readable format
     uint32_t local_ip = server_addr.sin_addr.s_addr;
-    printf("\nIP is: %d.%d.%d.%d\n", local_ip & 0xff, local_ip >> 8 & 0x0ff, local_ip >> 16 & 0x0ff, local_ip >> 24 & 0x0ff);
-    // printf("\nPort is: %d\n", local_addr.sin_port);
+    printf("\nServer is live at: http://%d.%d.%d.%d:%d\n", local_ip & 0xff, local_ip >> 8 & 0x0ff, local_ip >> 16 & 0x0ff, local_ip >> 24 & 0x0ff, PORT);
+    printf("aka: https://localhost:%d\n", PORT);
 
-    // make the socket listen, with a queue of 5
-    if (listen(sockfd, 900) != 0)
+    // make the socket listen, with a max queue of pending connections = 10
+    if (listen(sockfd, 10) != 0)
     {
         perror("Error listening to socket");
         close(sockfd);
         return 1;
     }
 
-    struct sockaddr_in clientaddr;
-    socklen_t client_len = sizeof(clientaddr);
-
     while (true)
     {
+        struct sockaddr_in clientaddr;
+        socklen_t client_len = sizeof(clientaddr);
+
         // accept incoming connection and store client address info
         if ((new_sockfd = accept(sockfd, (struct sockaddr *)&clientaddr, &client_len)) == -1)
         {
             perror("Error accepting connection");
+            continue; // skip to accepting the next connection
         }
-        printf("START\n");
 
         // Read data from new_sockfd into buffer, null terminate, then print out
         char buf[4096];
-        int bytes_read = read(new_sockfd, buf, 4096);
-        if (bytes_read < 0)
+        int bytes_read = read(new_sockfd, buf, 4095);
+        if (bytes_read > 0)
         {
-            perror("Error reading fd");
-        }
-        else
-        {
-
             buf[bytes_read] = '\0';
             printf("\n%s\n", buf);
 
@@ -96,6 +93,10 @@ int main()
             {
                 printf("Sent response!");
             }
+        }
+        else
+        {
+            perror("Error reading fd");
         }
         printf("END\n");
 
