@@ -5,9 +5,59 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <signal.h>
+#include <pthread.h>
 
-int sockfd, new_sockfd;
+int sockfd, client_sockfd;
 int PORT = 8080;
+int BUFFER_SIZE = 4096;
+
+void requestHandler(int client_sockfd) {
+    // Read data from client_sockfd into buffer, null terminate, then print out
+    char buf[BUFFER_SIZE];
+    int bytes_read = recv(client_sockfd, buf, BUFFER_SIZE, 0);
+    if (bytes_read > 0)
+    {
+        buf[bytes_read] = '\0';
+        printf("Recieved request: \n%s\n", buf);
+    }
+    else
+    {
+        perror("Error reading fd");
+    }
+
+}
+
+void responseHandler(int client_sockfd) {
+    char resp[BUFFER_SIZE]{0};
+    // Status line
+    strcpy(resp, "HTTP/1.1 200 OK\r\n");
+    // optional headers
+    strcat(resp, "Content-Type: text/html\r\n");
+    // empty line
+    strcat(resp, "\r\n");
+    // response body
+    strcat(resp, "Hello World");
+    int bytes_written = send(client_sockfd, resp, sizeof(resp), 0);
+    if (bytes_written > 1)
+    {
+        printf("\nSent response:\n%s\n", resp);
+    }
+
+
+    printf("END\n");
+
+}
+
+
+void* handleClient(void* client_socket) {
+    int client_sockfd = *(int*)client_socket;
+    requestHandler(client_sockfd);
+    responseHandler(client_sockfd);
+    
+    close(client_sockfd);
+    return nullptr;
+}
+
 
 // close sockets upon signal interruption, enable re-use of ports
 void handle_sigint(int sig)
@@ -57,52 +107,28 @@ int main()
         return 1;
     }
 
+    // infinite loop to accept new clients
     while (true)
     {
-        struct sockaddr_in clientaddr;
-        socklen_t client_len = sizeof(clientaddr);
-
         // accept incoming connection and store client address info
-        if ((new_sockfd = accept(sockfd, (struct sockaddr *)&clientaddr, &client_len)) == -1)
+        if ((client_sockfd = accept(sockfd, (struct sockaddr *)NULL, NULL)) == -1)
         {
             perror("Error accepting connection");
             continue; // skip to accepting the next connection
         }
 
-        // Read data from new_sockfd into buffer, null terminate, then print out
-        char buf[4096];
-        int bytes_read = read(new_sockfd, buf, 4095);
-        if (bytes_read > 0)
-        {
-            buf[bytes_read] = '\0';
-            printf("\n%s\n", buf);
+        pthread_t thread_id;
 
-            // return basic response
-            char resp[4096]{0};
-            // Status line
-            strcpy(resp, "HTTP/1.1 404 Not Found\r\n");
-            // optional headers
-            strcat(resp, "Content-Type: text/html\r\n");
-            // empty line
-            strcat(resp, "\r\n");
-            // response body
-            strcat(resp, "HELLO WORLD");
-            int bytes_written = write(new_sockfd, resp, sizeof(resp));
+        // allocate space for worker thread's argument
+        void* client_socket = malloc(sizeof(int));
+        *(int*)client_socket = client_sockfd;
 
-            if (bytes_written > 1)
-            {
-                printf("Sent response!");
-            }
-        }
-        else
-        {
-            perror("Error reading fd");
-        }
-        printf("END\n");
+        pthread_create(&thread_id, NULL, handleClient, client_socket);
+        // handleClient(client_sockfd);       
 
-        close(new_sockfd);
+        pthread_detach(thread_id);
     }
-
     close(sockfd);
     return 0;
 }
+
