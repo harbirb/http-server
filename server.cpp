@@ -11,7 +11,8 @@ int sockfd, client_sockfd;
 int PORT = 8080;
 int BUFFER_SIZE = 4096;
 
-void requestHandler(int client_sockfd) {
+void requestHandler(int client_sockfd)
+{
     // Read data from client_sockfd into buffer, null terminate, then print out
     char buf[BUFFER_SIZE];
     int bytes_read = recv(client_sockfd, buf, BUFFER_SIZE, 0);
@@ -24,10 +25,10 @@ void requestHandler(int client_sockfd) {
     {
         perror("Error reading fd");
     }
-
 }
 
-void responseHandler(int client_sockfd) {
+void responseHandler(int client_sockfd)
+{
     char resp[BUFFER_SIZE]{0};
     // Status line
     strcpy(resp, "HTTP/1.1 200 OK\r\n");
@@ -43,21 +44,18 @@ void responseHandler(int client_sockfd) {
         printf("\nSent response:\n%s\n", resp);
     }
 
-
     printf("END\n");
-
 }
 
-
-void* handleClient(void* client_socket) {
-    int client_sockfd = *(int*)client_socket;
+void *handleClient(void *client_socket)
+{
+    int client_sockfd = *(int *)client_socket;
+    free(client_socket);
     requestHandler(client_sockfd);
     responseHandler(client_sockfd);
-    
     close(client_sockfd);
     return nullptr;
 }
-
 
 // close sockets upon signal interruption, enable re-use of ports
 void handle_sigint(int sig)
@@ -120,15 +118,12 @@ int main()
         pthread_t thread_id;
 
         // allocate space for worker thread's argument
-        void* client_socket = malloc(sizeof(int));
-        *(int*)client_socket = client_sockfd;
+        void *client_socket = malloc(sizeof(int));
+        *(int *)client_socket = client_sockfd;
 
         pthread_create(&thread_id, NULL, handleClient, client_socket);
-        // handleClient(client_sockfd);       
-
         pthread_detach(thread_id);
     }
     close(sockfd);
     return 0;
 }
-
