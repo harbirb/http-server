@@ -1,8 +1,11 @@
 # TODO
 
-- Use docker for development in VSCode
-- Handle different response types
-- Multi-threading on server to handle concurrent connections
+- Handle different requests GET vs POST
+- Parse url path parameters
+- Parse query strings
+- Serving static files
+- Sending Large Files to a network device - phone to PC
+- Stream a video between devices
 
 #### Docker container ports
 
