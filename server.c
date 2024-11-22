@@ -41,6 +41,7 @@ void handlePost(char *reqBuffer)
 // Given a request buffer, returns the method and URI
 void parseRequest(char *reqBuffer)
 {
+    // TODO: define a struct to pass request args to handleClient
     // use C std library to compare strings
     char *endOfMethod = strchr(reqBuffer, ' ');
     char *endOfURI = strchr(endOfMethod + 1, ' ');
