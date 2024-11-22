@@ -11,25 +11,11 @@ int sockfd, client_sockfd;
 int PORT = 8080;
 int BUFFER_SIZE = 4096;
 
-void requestHandler(int client_sockfd)
+void handleGet(char *reqBuffer, int client_sockfd)
 {
-    // Read data from client_sockfd into buffer, null terminate, then print out
-    char buf[BUFFER_SIZE];
-    int bytes_read = recv(client_sockfd, buf, BUFFER_SIZE, 0);
-    if (bytes_read > 0)
-    {
-        buf[bytes_read] = '\0';
-        printf("Recieved request: \n%s\n", buf);
-    }
-    else
-    {
-        perror("Error reading fd");
-    }
-}
-
-void responseHandler(int client_sockfd)
-{
-    char resp[BUFFER_SIZE]{0};
+    
+    char resp[BUFFER_SIZE];
+    memset(resp, 0, BUFFER_SIZE);
     // Status line
     strcpy(resp, "HTTP/1.1 200 OK\r\n");
     // optional headers
@@ -37,24 +23,57 @@ void responseHandler(int client_sockfd)
     // empty line
     strcat(resp, "\r\n");
     // response body
-    strcat(resp, "Hello World");
+    strcat(resp, "Hello World: you sent a GET request");
     int bytes_written = send(client_sockfd, resp, sizeof(resp), 0);
+    free(reqBuffer);
     if (bytes_written > 1)
     {
-        printf("\nSent response:\n%s\n", resp);
+        // printf("\nSent response:\n%s\n", resp);
     }
 
     printf("END\n");
 }
 
-void *handleClient(void *client_socket)
+void handlePost(char * reqBuffer) {
+
+}
+
+// Given a request buffer, returns the method and URI
+void parseRequest(char* reqBuffer) {
+    // use C std library to compare strings
+    
+}
+
+void *handleClient(void *arg)
 {
-    int client_sockfd = *(int *)client_socket;
-    free(client_socket);
-    requestHandler(client_sockfd);
-    responseHandler(client_sockfd);
+    int client_sockfd = *(int *)arg;
+
+    // Read data from client_sockfd into buffer
+    char* buf = (char*) malloc(BUFFER_SIZE);
+    int bytes_read = recv(client_sockfd, buf, BUFFER_SIZE, 0);
+    if (bytes_read > 0)
+    {
+        // null terminate and log the request buffer
+        buf[bytes_read] = '\0';
+        // TODO: call parseRequest, call appropriate method(args)
+        if (strncmp("GET", buf, 3) == 0)
+        {
+            printf("GET received\n");
+            handleGet(buf, client_sockfd);
+        }
+        else if (strncmp("POST", buf, 4) == 0)
+        {
+            printf("POST received");
+            handlePost(buf);
+        }
+    }
+    else
+    {
+        perror("Error reading fd");
+    }
     close(client_sockfd);
-    return nullptr;
+    free(arg);
+    return NULL;
 }
 
 // close sockets upon signal interruption, enable re-use of ports
@@ -106,7 +125,7 @@ int main()
     }
 
     // infinite loop to accept new clients
-    while (true)
+    while (1)
     {
         // accept incoming connection and store client address info
         if ((client_sockfd = accept(sockfd, (struct sockaddr *)NULL, NULL)) == -1)
