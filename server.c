@@ -13,7 +13,7 @@ int BUFFER_SIZE = 4096;
 
 void handleGet(char *reqBuffer, int client_sockfd)
 {
-    
+
     char resp[BUFFER_SIZE];
     memset(resp, 0, BUFFER_SIZE);
     // Status line
@@ -31,17 +31,34 @@ void handleGet(char *reqBuffer, int client_sockfd)
         // printf("\nSent response:\n%s\n", resp);
     }
 
-    printf("END\n");
+    printf("END response\n");
 }
 
-void handlePost(char * reqBuffer) {
-
+void handlePost(char *reqBuffer)
+{
 }
 
 // Given a request buffer, returns the method and URI
-void parseRequest(char* reqBuffer) {
+void parseRequest(char *reqBuffer)
+{
     // use C std library to compare strings
-    
+    char *endOfMethod = strchr(reqBuffer, ' ');
+    char *endOfURI = strchr(endOfMethod + 1, ' ');
+    if (!endOfMethod || !endOfURI)
+    {
+        fprintf(stderr, "Invalid request line: missing spaces\n");
+        return;
+    }
+    char method[256], URI[256];
+    size_t methodLength = endOfMethod - reqBuffer;
+    strncpy(method, reqBuffer, methodLength);
+    method[methodLength] = '\0';
+    printf("Method: %s\n", method);
+
+    size_t URILength = endOfURI - (endOfMethod + 1);
+    strncpy(URI, endOfMethod + 1, URILength);
+    URI[URILength] = '\0';
+    printf("URI: %s\n", URI);
 }
 
 void *handleClient(void *arg)
@@ -49,16 +66,17 @@ void *handleClient(void *arg)
     int client_sockfd = *(int *)arg;
 
     // Read data from client_sockfd into buffer
-    char* buf = (char*) malloc(BUFFER_SIZE);
+    char *buf = (char *)malloc(BUFFER_SIZE);
     int bytes_read = recv(client_sockfd, buf, BUFFER_SIZE, 0);
     if (bytes_read > 0)
     {
         // null terminate and log the request buffer
         buf[bytes_read] = '\0';
         // TODO: call parseRequest, call appropriate method(args)
+        parseRequest(buf);
         if (strncmp("GET", buf, 3) == 0)
         {
-            printf("GET received\n");
+            // printf("GET received\n");
             handleGet(buf, client_sockfd);
         }
         else if (strncmp("POST", buf, 4) == 0)
