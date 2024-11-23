@@ -11,9 +11,14 @@ int sockfd, client_sockfd;
 int PORT = 8080;
 int BUFFER_SIZE = 4096;
 
+typedef struct requestLine
+{
+    char method[256];
+    char URI[256];
+} requestLine;
+
 void handleGet(char *reqBuffer, int client_sockfd)
 {
-
     char resp[BUFFER_SIZE];
     memset(resp, 0, BUFFER_SIZE);
     // Status line
@@ -28,7 +33,7 @@ void handleGet(char *reqBuffer, int client_sockfd)
     free(reqBuffer);
     if (bytes_written > 1)
     {
-        // printf("\nSent response:\n%s\n", resp);
+        printf("\nSent response:\n%s\n", resp);
     }
 
     printf("END response\n");
@@ -39,7 +44,7 @@ void handlePost(char *reqBuffer)
 }
 
 // Given a request buffer, returns the method and URI
-void parseRequest(char *reqBuffer)
+void parseRequest(char *reqBuffer, requestLine *reqLine)
 {
     // TODO: define a struct to pass request args to handleClient
     // use C std library to compare strings
@@ -50,16 +55,15 @@ void parseRequest(char *reqBuffer)
         fprintf(stderr, "Invalid request line: missing spaces\n");
         return;
     }
-    char method[256], URI[256];
     size_t methodLength = endOfMethod - reqBuffer;
-    strncpy(method, reqBuffer, methodLength);
-    method[methodLength] = '\0';
-    printf("Method: %s\n", method);
+    strncpy(reqLine->method, reqBuffer, methodLength);
+    reqLine->method[methodLength] = '\0';
+    printf("Method: %s\n", reqLine->method);
 
     size_t URILength = endOfURI - (endOfMethod + 1);
-    strncpy(URI, endOfMethod + 1, URILength);
-    URI[URILength] = '\0';
-    printf("URI: %s\n", URI);
+    strncpy(reqLine->URI, endOfMethod + 1, URILength);
+    reqLine->URI[URILength] = '\0';
+    printf("URI: %s\n", reqLine->URI);
 }
 
 void *handleClient(void *arg)
@@ -74,15 +78,18 @@ void *handleClient(void *arg)
         // null terminate and log the request buffer
         buf[bytes_read] = '\0';
         // TODO: call parseRequest, call appropriate method(args)
-        parseRequest(buf);
-        if (strncmp("GET", buf, 3) == 0)
+        requestLine reqLine;
+        parseRequest(buf, &reqLine);
+        // printf("\n%s\n", buf);
+        // printf("\n%s\n", reqLine.method);
+        if (strcmp(reqLine.method, "GET") == 0)
         {
-            // printf("GET received\n");
+            printf("GET received\n");
             handleGet(buf, client_sockfd);
         }
-        else if (strncmp("POST", buf, 4) == 0)
+        else if (strcmp(reqLine.method, "POST") == 0)
         {
-            printf("POST received");
+            printf("POST received\n");
             handlePost(buf);
         }
     }
@@ -114,6 +121,15 @@ int main()
     {
         perror("Error in creating socket");
         return 1;
+    }
+
+    // Set socket option SO_REUSEADDR
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+    {
+        perror("setsockopt failed");
+        close(sockfd);
+        exit(EXIT_FAILURE);
     }
 
     // socket bind configuration - use loopback address (localhost), ipv4, port 8080
