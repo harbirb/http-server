@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 int sockfd, client_sockfd;
 int PORT = 8080;
@@ -17,26 +19,44 @@ typedef struct requestLine
     char URI[256];
 } requestLine;
 
-void handleGet(char *reqBuffer, int client_sockfd)
+void handleGet(int client_sockfd, char *uri)
 {
-    char resp[BUFFER_SIZE];
-    memset(resp, 0, BUFFER_SIZE);
-    // Status line
-    strcpy(resp, "HTTP/1.1 200 OK\r\n");
-    // optional headers
-    strcat(resp, "Content-Type: text/html\r\n");
-    // empty line
-    strcat(resp, "\r\n");
-    // response body
-    strcat(resp, "Hello World: you sent a GET request");
-    int bytes_written = send(client_sockfd, resp, sizeof(resp), 0);
-    free(reqBuffer);
-    if (bytes_written > 1)
+
+    int testfile = open("./test-image.jpg", O_RDONLY);
+    if (testfile < 0)
     {
-        printf("\nSent response:\n%s\n", resp);
+        perror("failed to get testfile");
+        char *resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+        send(client_sockfd, resp, strlen(resp), 0);
     }
 
-    printf("END response\n");
+    struct stat st;
+    fstat(testfile, &st);
+    printf("Size: %ld\n", st.st_size);
+
+    char header[BUFFER_SIZE];
+    memset(header, 0, BUFFER_SIZE);
+    snprintf(header, BUFFER_SIZE,
+             "HTTP/1.1 200 OK\r\n"
+             "Content-Type: image/jpeg\r\n"
+             "Content-Length: %ld\r\n"
+             "Connection: close\r\n"
+             "\r\n",
+             st.st_size);
+
+    // send headers
+    // BUG: use strlen instead of sizeof (only send valid part of buffer)
+    send(client_sockfd, header, strlen(header), 0);
+
+    // send body
+    char buffer[BUFFER_SIZE];
+    ssize_t bytes_read;
+    while ((bytes_read = read(testfile, buffer, BUFFER_SIZE)) > 0)
+    {
+        ssize_t bytes_sent = send(client_sockfd, buffer, bytes_read, 0);
+        // printf("\n READ: %d SENT: %d", bytes_read, bytes_sent);
+    }
+    close(testfile);
 }
 
 void handlePost(char *reqBuffer)
@@ -46,8 +66,6 @@ void handlePost(char *reqBuffer)
 // Given a request buffer, returns the method and URI
 void parseRequest(char *reqBuffer, requestLine *reqLine)
 {
-    // TODO: define a struct to pass request args to handleClient
-    // use C std library to compare strings
     char *endOfMethod = strchr(reqBuffer, ' ');
     char *endOfURI = strchr(endOfMethod + 1, ' ');
     if (!endOfMethod || !endOfURI)
@@ -69,23 +87,18 @@ void parseRequest(char *reqBuffer, requestLine *reqLine)
 void *handleClient(void *arg)
 {
     int client_sockfd = *(int *)arg;
-
     // Read data from client_sockfd into buffer
     char *buf = (char *)malloc(BUFFER_SIZE);
     int bytes_read = recv(client_sockfd, buf, BUFFER_SIZE, 0);
     if (bytes_read > 0)
     {
-        // null terminate and log the request buffer
         buf[bytes_read] = '\0';
-        // TODO: call parseRequest, call appropriate method(args)
         requestLine reqLine;
         parseRequest(buf, &reqLine);
-        // printf("\n%s\n", buf);
-        // printf("\n%s\n", reqLine.method);
         if (strcmp(reqLine.method, "GET") == 0)
         {
             printf("GET received\n");
-            handleGet(buf, client_sockfd);
+            handleGet(client_sockfd, reqLine.URI);
         }
         else if (strcmp(reqLine.method, "POST") == 0)
         {
