@@ -76,6 +76,7 @@ char *get_mime_type(char *uri)
 void handleGet(int client_sockfd, char *uri)
 {
     // access public files using ./public/filename (uri='/filename')
+    // TODO: VULNERABLE TO DIRECTORY TRAVERSAL ATTACK
     char sanitized_uri[256];
     snprintf(sanitized_uri, sizeof(sanitized_uri), "./public%s", uri);
     if (strcmp(uri, "/") == 0)
