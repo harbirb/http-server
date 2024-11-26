@@ -46,6 +46,7 @@ mimes mimes_map[] = {
     {"mp3", "audio/mpeg"},
     {NULL, NULL}};
 
+// get the file ext after the '.' (eg. jpg, png, html)
 char *get_file_extension(char *uri)
 {
     char *dot = strrchr(uri, '.');
@@ -61,7 +62,6 @@ char *get_file_extension(char *uri)
 char *get_mime_type(char *uri)
 {
     char *file_ext = get_file_extension(uri);
-    // get the fileext after the '.' (jpg, png, html)
     for (size_t i = 0; mimes_map[i].ext != NULL; i++)
     {
         if (strcmp(mimes_map[i].ext, file_ext) == 0)
@@ -70,7 +70,7 @@ char *get_mime_type(char *uri)
         }
     }
     // Return generic binary data (true type unknown)
-    return "application/octet-stream";
+    return "text";
 }
 
 void handleGet(int client_sockfd, char *uri)
@@ -78,44 +78,43 @@ void handleGet(int client_sockfd, char *uri)
     // access public files using ./public/filename (uri='/filename')
     char sanitized_uri[256];
     snprintf(sanitized_uri, sizeof(sanitized_uri), "./public%s", uri);
-    int testfile = open(sanitized_uri, O_RDONLY);
-    if (testfile < 0)
+    if (strcmp(uri, "/") == 0)
     {
-        perror("failed to get testfile");
-        printf("%s\n", sanitized_uri);
-        char *resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+        strcpy(sanitized_uri, "./public/index.html");
+    }
+    int file_fd = open(sanitized_uri, O_RDONLY);
+    if (file_fd < 0)
+    {
+        perror("failed to find resource");
+        // TODO: 404 not found page, when file does not exist
+        // file_fd = open("404page.......")
+        char *resp = "HTTP/1.1 404 Not Found\r\n\r\nNOT FOUND!!\r\n";
         send(client_sockfd, resp, strlen(resp), 0);
+        return;
     }
 
-    struct stat st;
-    fstat(testfile, &st);
-    printf("Size: %ld\n", st.st_size);
-
-    // TODO: GET FILE EXTENSION - get MIME TYPE
-    printf("%s\n", get_mime_type(uri));
-    // TODO: BUILD HTTP REPSPONSE DYNAMICALLY
+    char *mime_type = get_mime_type(uri);
     char header[BUFFER_SIZE];
     memset(header, 0, BUFFER_SIZE);
+    // content-length is optional when specifying Connection: close OR Transfer-encoding: chunked
     snprintf(header, BUFFER_SIZE,
              "HTTP/1.1 200 OK\r\n"
-             "Content-Type: image/jpeg\r\n"
-             "Content-Length: %ld\r\n"
+             "Content-Type: %s\r\n"
              "Connection: close\r\n"
              "\r\n",
-             st.st_size);
+             mime_type);
 
     // send headers
-    // BUG: use strlen instead of sizeof (only send valid part of buffer)
     send(client_sockfd, header, strlen(header), 0);
 
     // send body
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read;
-    while ((bytes_read = read(testfile, buffer, BUFFER_SIZE)) > 0)
+    while ((bytes_read = read(file_fd, buffer, BUFFER_SIZE)) > 0)
     {
         ssize_t bytes_sent = send(client_sockfd, buffer, bytes_read, 0);
     }
-    close(testfile);
+    close(file_fd);
 }
 
 void handlePost(char *reqBuffer)
