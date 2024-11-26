@@ -19,13 +19,70 @@ typedef struct requestLine
     char URI[256];
 } requestLine;
 
+// Map from file type to MIME type
+typedef struct mimes
+{
+    char *ext;
+    char *mime_type;
+} mimes;
+
+mimes mimes_map[] = {
+    {"html", "text/html"},
+    {"htm", "text/html"},
+    {"css", "text/css"},
+    {"js", "application/javascript"},
+    {"json", "application/json"},
+    {"jpg", "image/jpeg"},
+    {"jpeg", "image/jpeg"},
+    {"png", "image/png"},
+    {"gif", "image/gif"},
+    {"svg", "image/svg+xml"},
+    {"ico", "image/x-icon"},
+    {"txt", "text/plain"},
+    {"xml", "application/xml"},
+    {"pdf", "application/pdf"},
+    {"zip", "application/zip"},
+    {"mp4", "video/mp4"},
+    {"mp3", "audio/mpeg"},
+    {NULL, NULL}};
+
+char *get_file_extension(char *uri)
+{
+    char *dot = strrchr(uri, '.');
+    if (dot == NULL)
+    {
+        return "";
+    }
+    return dot + 1;
+}
+
+// LINEAR SEARCH over MIME map
+// TODO: Implement a Hashmap
+char *get_mime_type(char *uri)
+{
+    char *file_ext = get_file_extension(uri);
+    // get the fileext after the '.' (jpg, png, html)
+    for (size_t i = 0; mimes_map[i].ext != NULL; i++)
+    {
+        if (strcmp(mimes_map[i].ext, file_ext) == 0)
+        {
+            return mimes_map[i].mime_type;
+        }
+    }
+    // Return generic binary data (true type unknown)
+    return "application/octet-stream";
+}
+
 void handleGet(int client_sockfd, char *uri)
 {
-
-    int testfile = open("./test-image.jpg", O_RDONLY);
+    // access public files using ./public/filename (uri='/filename')
+    char sanitized_uri[256];
+    snprintf(sanitized_uri, sizeof(sanitized_uri), "./public%s", uri);
+    int testfile = open(sanitized_uri, O_RDONLY);
     if (testfile < 0)
     {
         perror("failed to get testfile");
+        printf("%s\n", sanitized_uri);
         char *resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
         send(client_sockfd, resp, strlen(resp), 0);
     }
@@ -34,6 +91,9 @@ void handleGet(int client_sockfd, char *uri)
     fstat(testfile, &st);
     printf("Size: %ld\n", st.st_size);
 
+    // TODO: GET FILE EXTENSION - get MIME TYPE
+    printf("%s\n", get_mime_type(uri));
+    // TODO: BUILD HTTP REPSPONSE DYNAMICALLY
     char header[BUFFER_SIZE];
     memset(header, 0, BUFFER_SIZE);
     snprintf(header, BUFFER_SIZE,
@@ -54,7 +114,6 @@ void handleGet(int client_sockfd, char *uri)
     while ((bytes_read = read(testfile, buffer, BUFFER_SIZE)) > 0)
     {
         ssize_t bytes_sent = send(client_sockfd, buffer, bytes_read, 0);
-        // printf("\n READ: %d SENT: %d", bytes_read, bytes_sent);
     }
     close(testfile);
 }
