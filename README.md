@@ -1,9 +1,7 @@
 # TODO
 
 - Handle different requests GET vs POST
-- Parse url path parameters
-- Parse query strings
-- Serving static files
+- Serving static files - html vs image vs video vs larger
 - Sending Large Files to a network device - phone to PC
 - Stream a video between devices
 
@@ -27,7 +25,7 @@
 - Run the interactive shell with "docker compose exec -it app bash"
 - Compile and run with "gcc -o server server.cpp", "./server"
 
-
 #### Docker for Development
-- Dev container - using existing docker compose 
+
+- Dev container - using existing docker compose
 - Rebuild container to reflect changes to mounted volumes, restart container to test runtime changes
