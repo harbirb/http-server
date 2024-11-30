@@ -23,7 +23,7 @@ I implemented a basic web server that serves files over HTTP. Although basic, it
 - **Response Headers**: Built and sent HTTP headers with status codes, content types, and lengths
 - **Manpages**: Utilized manual pages to understand system call arguments, return values, and error handling
 - **Directory Traversal Attacks**: Learned the risk of malicious users exploiting URIs to access files (../ sequences)
-- Usefulness of Docker
+- **Usefulness of Docker**
   - **Isolated Environment for Security**: Docker confines directory traversal attacks or other exploits to the container's filesystem, protecting the host system.
   - **Cross-Platform Development**: Ran and tested a Linux-based server seamlessly on a different OS (Windows)
   - **Volume Mapping**: Used Docker volumes to share the ./public directory to the container for easy file serving
