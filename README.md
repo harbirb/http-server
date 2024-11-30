@@ -1,27 +1,27 @@
-# TODO
+# A HTTP server from scratch in C
 
+### What + why:
+I implemented a basic web server that serves files over HTTP. Although basic, it was a great exercise to "learn by building" and get a better understanding of server-client interactions.
 
-#### Docker container ports
+### Features:
+- **Sockets**: Creates and binds a socket to an address and port. It listens and accepts incoming connections
+- **Multi-threading**: Each client connection is handled in a separate thread
+- **Basic Request Parsing**: Extracts HTTP method and URI from the request
+- **MIME Type Handling**: Maps file extensions to MIME types using a linear search of an array
+- **File Serving for GET Requests**: Reads files from a ./public directory and sends them as responses
+- 
 
-- Container runs inside a virtualized network
-- Container ports are exposed by apps running inside a container, accessible only to things running within the container/other containers
-- Container ports are isolated so need to explicitly bind ports from container to host machine
-
-#### Previously, I setup container with a command to compile/run code upon startup. This was incorrect:
-
-- For a development container, I should keep the container running and recompile code as needed, instead of restarting the container each time.
-- Docker compose runs in the background. Compiling and running in the interactive shell works because it runs in the foreground with proper terminal attachment.
-- Networking stack of the container is fully initialized when the command is run manually
-
-#### Running the server
-
-- Build image from dockerfile using "docker compose build"
-- Run container from image using "docker compose up -d" (-d runs in detached mode, containers run in background, terminal is freed up)
-  - Or both steps at once using "docker compose up --build -d"
-- Run the interactive shell with "docker compose exec -it app bash"
-- Compile and run with "gcc -o server server.cpp", "./server"
-
-#### Docker for Development
-
-- Dev container - using existing docker compose
-- Rebuild container to reflect changes to mounted volumes, restart container to test runtime changes
+### Things that I learned:
+- **Sockets**: Provide a communication interface between processes over a network using the TCP/IP stack
+- **TCP**: Transmission Control Protocol - a reliable, ordered, and error-checked delivery of a stream of bytes
+  - whereas UDP is a fire-and-forget transmission, doesn't check for packet delivery
+- **Binding**: Associates a socket with a specific IP address and port, enabling the server to accept incoming connections on that endpoint
+- **Multithreading**: Each client connection is handled in a separate thread, enabling the server to support multiple clients concurrently
+- **Resource Management**: Importance of cleaning up resources (closing sockets, freeing memory) after use
+- **Request Parsing**: Learned to parse HTTP request lines to extract the method (GET/POST) and URI
+- **Response Headers**: Built and sent HTTP headers with status codes, content types, and lengths
+- **Manpages**: Utilized manual pages to understand system call arguments, return values, and error handling
+- **Directory Traversal Attacks**: Learned the risk of malicious users exploiting URIs to access files (../ sequences)
+Usefulness of Docker
+- **Portability**: For sharing and running applications across different system (UNIX sys calls on a Windows machine)
+- **Development Environments**: Dev Containers set up reproducible and development environments.
