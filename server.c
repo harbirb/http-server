@@ -94,6 +94,9 @@ void handleGet(int client_sockfd, char *uri)
         return;
     }
 
+    struct stat st;
+    fstat(file_fd, &st);
+
     char *mime_type = get_mime_type(uri);
     char header[BUFFER_SIZE];
     memset(header, 0, BUFFER_SIZE);
@@ -101,9 +104,12 @@ void handleGet(int client_sockfd, char *uri)
     snprintf(header, BUFFER_SIZE,
              "HTTP/1.1 200 OK\r\n"
              "Content-Type: %s\r\n"
-             "Connection: close\r\n"
+             "Content-Length: %ld\r\n"
+             "Accept-Ranges: bytes\r\n"
+             "Connection: keep-alive\r\n"
              "\r\n",
-             mime_type);
+             mime_type,
+             st.st_size);
 
     // send headers
     send(client_sockfd, header, strlen(header), 0);
@@ -113,7 +119,13 @@ void handleGet(int client_sockfd, char *uri)
     ssize_t bytes_read;
     while ((bytes_read = read(file_fd, buffer, BUFFER_SIZE)) > 0)
     {
-        ssize_t bytes_sent = send(client_sockfd, buffer, bytes_read, 0);
+        // MSG_NOSIGNAL - dont generate SIGPIPE (closed socket) signal if client closed connection
+        ssize_t bytes_sent = send(client_sockfd, buffer, bytes_read, MSG_NOSIGNAL);
+        if (bytes_sent == -1)
+        {
+            perror("send failed");
+            break;
+        }
     }
     close(file_fd);
 }
@@ -184,6 +196,8 @@ void handle_sigint(int sig)
 
 int main()
 {
+    // browser sends sigpipe signal (close connection) ignore it to send larger files
+    signal(SIGPIPE, SIG_IGN);
     struct sockaddr_in server_addr;
 
     // create socket, IPV4, type=STREAM
@@ -221,7 +235,7 @@ int main()
     // stored in network byte order (big-endian), need to convert to human-readable format
     uint32_t local_ip = server_addr.sin_addr.s_addr;
     printf("\nServer is live at: http://%d.%d.%d.%d:%d\n", local_ip & 0xff, local_ip >> 8 & 0x0ff, local_ip >> 16 & 0x0ff, local_ip >> 24 & 0x0ff, PORT);
-    printf("aka: https://localhost:%d\n", PORT);
+    printf("aka: http://localhost:%d\n", PORT);
 
     // make the socket listen, with a max queue of pending connections = 10
     if (listen(sockfd, 10) != 0)
