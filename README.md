@@ -1,9 +1,5 @@
 # TODO
 
-- Handle different requests GET vs POST
-- Serving static files - html vs image vs video vs larger
-- Sending Large Files to a network device - phone to PC
-- Stream a video between devices
 
 #### Docker container ports
 
